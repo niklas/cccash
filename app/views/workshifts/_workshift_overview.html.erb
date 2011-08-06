@@ -14,7 +14,7 @@
       <th>Angel</th>
       <th>Money</th>
       <th>Status</th>
-      <th colspan='4'>Actions</th>
+      <th colspan='5'>Actions</th>
     </tr>
     <% @workshifts.group_by(&:status).each do |status, workshifts| %>
     <% workshifts.each do |workshift| %>
@@ -35,6 +35,7 @@
 
       <td><%= link_to 'Billing', billing_workshift_path(workshift) %></td>
       <td><%= link_to 'Details', workshift_path(workshift) %></td>
+      <td><%= link_to 'edit', edit_workshift_path(workshift) %></td>
       </td>
     </tr>
     <% end %>
