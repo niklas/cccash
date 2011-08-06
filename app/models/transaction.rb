@@ -80,7 +80,7 @@ class Transaction < ActiveRecord::Base
   def to_bon billing_address="", delimiter="\n"
     (
     [
-      "27C3".center(Printer::BON_WIDTH),
+      "CCCamp 2011".center(Printer::BON_WIDTH),
       "".center(Printer::BON_WIDTH),
       "Chaos Computer Club".center(Printer::BON_WIDTH),
       "Veranstaltungsgesellschaft mbH".center(Printer::BON_WIDTH),
