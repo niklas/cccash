@@ -19,12 +19,7 @@ class Ticket < ActiveRecord::Base
   acts_as_list
   
   def to_bon_line
-    line = ''
-    p = sprintf('%.2f', price)
-    t = name.convert_umlauts
-    line << t
-    line << " " * ( Printer::BON_WIDTH - (p.length + t.length) )
-    line << p
+    single_bon_line
   end
   
   def sales_grouped_by_day(fmt='%d', shift=6.hours)
@@ -38,5 +33,23 @@ class Ticket < ActiveRecord::Base
                                  :end   => end_time,
                                  :step  => step,
                                  :conditions => { :ticket_id => self.id }
+  end
+
+  private
+
+  def single_bon_line
+    returning '' do |line|
+      line << name_for_bon
+      line << " " * ( Printer::BON_WIDTH - (price_for_bon.length + name_for_bon.length) )
+      line << price_for_bon
+    end
+  end
+
+  def price_for_bon
+    @price_for_bon ||= sprintf('%.2f', price)
+  end
+
+  def name_for_bon
+    @name_for_bon ||= name.convert_umlauts
   end
 end

@@ -35,4 +35,10 @@ class TicketTest < ActiveSupport::TestCase
   test "has special_guests association" do
     assert_nothing_raised { tickets(:one).special_guests }
   end
+
+  test "one line for bon if price < 80" do
+    ticket = Ticket.create! :price => 50, :name => 'Youngster'
+    line = ticket.to_bon_line
+    assert_match %r~^Youngster\s+50.00$~, line
+  end
 end
