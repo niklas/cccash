@@ -12,9 +12,9 @@ class Ticket < ActiveRecord::Base
   named_scope :custom,      :conditions => {:custom => true}
   named_scope :standard,    :conditions => {:custom => false,:presale => false}
   named_scope :presale,     :conditions => {:presale => true,:custom => false}
-  named_scope :available,   :conditions => [
+  named_scope :available,   lambda {{ :conditions => [
     "available_from < ? and ? < available_until", Time.now,Time.now
-  ]
+  ]}}
 
   acts_as_list
   
