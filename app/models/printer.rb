@@ -10,7 +10,7 @@ class Printer < ActiveRecord::Base
   def print(data)
 #    if Rails.env == "production"
       IO.popen("/usr/bin/lpr -P #{cups_name}", 'w+') do |m|
-        m.puts data
+        m.puts data.to_s
       end
 #    else
 #      logger.info data

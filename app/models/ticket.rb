@@ -35,6 +35,15 @@ class Ticket < ActiveRecord::Base
                                  :conditions => { :ticket_id => self.id }
   end
 
+  # clones this ticket and disabled saving. This is used to split up tickets for seperate printing of bons (see Transaction#print_bon)
+  def clone_temp
+    returning clone do |c|
+      def c.save(*a)
+        true
+      end
+    end
+  end
+
   private
 
   def single_bon_line

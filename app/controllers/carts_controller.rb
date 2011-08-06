@@ -49,7 +49,7 @@ class CartsController < ApplicationController
         if @transaction.errors.empty?
           @cashbox.open_drawer
           if !@transaction.presale then
-            @cashbox.printer.print(@transaction.to_bon)
+            @bons = @transaction.print_bon!
           end
           
           render

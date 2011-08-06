@@ -5,6 +5,7 @@ class Transaction < ActiveRecord::Base
   has_many    :tickets,      :through => :ticket_sales
   belongs_to  :workshift
   belongs_to  :special_guest
+  has_many    :bons
   
   validates_presence_of :tickets, :message => "You must sell something!"
   validates_presence_of :workshift
@@ -45,10 +46,6 @@ class Transaction < ActiveRecord::Base
     tickets.inject(0) {|sum, ticket| sum += ticket.price}
   end
   
-  def total_mwst
-    
-  end
-  
   def presale
     self.tickets.each do |ticket|
       if ticket.presale? then
@@ -64,48 +61,44 @@ class Transaction < ActiveRecord::Base
   end
   
   def total_mwst
-    ((( total*19.0) / 119.0 ).round(2) )
+    Mwst.included_in total
   end
   
-  def transcode_billing_address address
-    
-    address_lines = address.split(/\r\n/).collect {|l| "  " + l.convert_umlauts[0...Printer::BON_WIDTH-2]}
-    
-    (
-      [ "Leistungsempfaenger:" ] +
-      address_lines
-    ).flatten.compact.collect {|line| line.ljust(Printer::BON_WIDTH)}
+  # 2011-08-06
+  # Ticketpreis (Standard- und Businessticket) für Abendkasse muss in zwei Beträge aufgeteilt werden:
+  #
+  #   - Infrastrukturbeteiligung: 67.23 EUR netto (+ 19% MwSt. => 80 EUR)
+  #   - Rest:
+  #	     Standard 79.83 EUR netto (+ 19% MwSt. => 95 EUR)
+  #	     Business  647.06 EUR netto (+ 19% MwSt. => 770 EUR)
+  #
+  #	   Für beide Beträge muß jeweils ein ordentlicher Beleg ausgestellt werden, also zwei Kassenbons pro Ticket.
+  #
+  #	   Unter-18-Tickets gehen wie gehabt mit einem.
+
+  BonSplitAt = 80
+
+  def print_bon!
+    new_bons = tickets.map do |ticket|
+      if ticket.price > BonSplitAt
+        ticket_infra = returning(ticket.clone_temp) do |t| 
+          t.price = BonSplitAt
+          t.name << " (Infrastruktur)"
+        end
+        ticket_rest = returning(ticket.clone_temp) do |t| 
+          t.price = ticket.price - ticket_infra.price
+          t.name << " (Rest)"
+        end
+        [
+          bons.create!(:ticket => ticket_infra),
+          bons.create!(:ticket => ticket_rest)
+        ]
+      else
+        bons.create!(:ticket => ticket)
+      end
+    end.flatten
+    new_bons.each(&:print!)
+    return new_bons
   end
   
-  def to_bon billing_address="", delimiter="\n"
-    (
-    [
-      "CCCamp 2011".center(Printer::BON_WIDTH),
-      "".center(Printer::BON_WIDTH),
-      "Chaos Computer Club".center(Printer::BON_WIDTH),
-      "Veranstaltungsgesellschaft mbH".center(Printer::BON_WIDTH),
-      "Postfach 64 02 36".center(Printer::BON_WIDTH),
-      "10048 Berlin\n".center(Printer::BON_WIDTH)
-    ] +
-      [transcode_billing_address(billing_address)] +
-    [
-      "\nTicket                                 EUR",
-      "-" * Printer::BON_WIDTH,
-      tickets.collect(&:to_bon_line),
-      "-" * Printer::BON_WIDTH,
-      sprintf( '%s %.2f', 'enthaltene MwSt', total_mwst.to_s).rjust(Printer::BON_WIDTH),
-      sprintf( '%s %.2f', 'Summe:', total.to_s).rjust(Printer::BON_WIDTH),
-      "=" * Printer::BON_WIDTH + "\n",
-      "Leistungsdatum gleich Rechnungsdatum".center(Printer::BON_WIDTH),
-      "Preise inkl. 19% MwSt".center(Printer::BON_WIDTH),
-      "VIELEN DANK!\n".center(Printer::BON_WIDTH),
-      "AG Charlottenburg HRB 71629".center(Printer::BON_WIDTH),
-      "USt-ID: DE203286729".center(Printer::BON_WIDTH),
-      (Time.now.strftime('%d. %b %Y - %H:%M ') + workshift.cashbox.name).center(Printer::BON_WIDTH),
-      ("Belegnummer: " + self.id.to_s).center(Printer::BON_WIDTH)
-      
-      
-    ]).flatten.join(delimiter) +
-    Printer::END_OF_BON
-  end
 end
